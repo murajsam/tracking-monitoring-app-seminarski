@@ -21,3 +21,7 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# backup .env fajlovi (tajne)
+*.backup
+.env.*.backup
