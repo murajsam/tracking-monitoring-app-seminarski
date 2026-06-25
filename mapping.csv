@@ -1,0 +1,26 @@
+Logwin,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+Status,MOT,Port of Origin,Port of Destination,Shipment No.,House,Master,Shipper,Consignee,PO Number,Shipper Ref.,ETD,ETA,ATD,ATA,Vessel,Voyage / Flight,Carrier,Container,Packages,Weight,Volume
+Status,,,,,House AWB,,Shipper,Receiver,PO Number,Shipper Ref. No,ETD,ETA,ATD,ATA,,,Carrier,,Packages,Weight,Volume
+Hellmann,,,,,,,,,,,,,,,,,,,,,
+Carrier,,,,,,,,,,,,,,,,,,,,,
+Status,House AWB,"Shipper
+Name",Shipper Country,"Consignee
+Name",Consignee Country,Departure Country,Departure Port,Destination Country,Destination Port,Incoterm,Flight No,No of Packages,"Gross
+Weight (Kg)","Chargeable
+Weight (Kg)","Act.
+Pick Up","Flight
+ETD","Flight
+ATD","Flight
+ETA","Flight
+ATA","Act.
+Delivery",
+Status,House AWB,Shipper,Shipper Country,Receiver,Reciever Country,,,,,,,Packages,Weight,,,ETD,ATD,ETA,ATA,,
+DHL,,,,,,,,,,,,,,,,,,,,,
+Carrier,,,,,,,,,,,,,,,,,,,,,
+Payer Account Number,Pickup Date,Origin Country/Territory IATA code,Origin City IATA Code,Destination Country/Territory IATA code,Destination City IATA Code,Waybill Number,Shipper Reference Number,Receiver,Receiver Postal Code,Product Code,Pieces,Piece ID,Manifested Weight,Estimated Delivery Date,Last Checkpoint Code,Latest Checkpoint Date/Time,Latest Checkpoint,Latest Checkpoint's Remarks,Location of Scan,Customer Uploaded Comments,Comments
+,,,,,,House AWB,Shipper Ref. No,Receiver,,,Packages,,Weight,ETA,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
