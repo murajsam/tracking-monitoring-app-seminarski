@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import fileRoutes from "./routes/file.route.js";
 import trackingRoutes from "./routes/tracking.route.js";
+import authRoutes from "./routes/auth.route.js";
 
 // load environment variables from .env file
 dotenv.config();
@@ -31,6 +32,7 @@ app.get("/", (req, res) => {
 });
 
 // api routes
+app.use("/api/auth", authRoutes); // rute za registraciju i prijavu korisnika
 app.use("/api/files", fileRoutes); // route for file upload and tracking data import
 app.use("/api/trackings", trackingRoutes); // route for getting tracking data from database
 

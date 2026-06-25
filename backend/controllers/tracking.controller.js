@@ -3,7 +3,16 @@ import Tracking from "../models/tracking.model.js";
 // get all tracking data from database
 export const getTrackings = async (req, res) => {
   try {
-    const trackings = await Tracking.find({});
+    // pravimo filter za pretragu baze
+    const filter = {};
+
+    // ako je prijavljen "dostavljac", prikazujemo SAMO posiljke njegovog dostavljaca
+    // ("korisnik" vidi sve, pa za njega filter ostaje prazan)
+    if (req.user.role === "dostavljac") {
+      filter["data.Carrier"] = req.user.carrier;
+    }
+
+    const trackings = await Tracking.find(filter);
     return res.status(200).json(trackings);
   } catch (error) {
     console.error("Error fetching trackings:", error.message);
@@ -19,6 +28,21 @@ export const getTrackingById = async (req, res) => {
   try {
     const { id } = req.params;
     const tracking = await Tracking.findById(id);
+
+    if (!tracking) {
+      return res.status(404).json({ message: "Posiljka nije pronadjena." });
+    }
+
+    // dostavljac sme da vidi detalje samo svojih posiljki
+    if (
+      req.user.role === "dostavljac" &&
+      tracking.data.Carrier !== req.user.carrier
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Nemate pristup ovoj posiljci." });
+    }
+
     return res.status(200).json(tracking);
   } catch (error) {
     console.error("Error fetching tracking:", error.message);
