@@ -1,7 +1,7 @@
 import XLSX from "xlsx";
 import { convertWeight, isPotentialDate } from "./dataConverters.js";
 
-// carrier tracking data for DHL, Hellman & Logwin (name and fields with all names)
+// nazivi kolona koje ocekujemo u excel fajlu za svakog dostavljaca (DHL, Hellman, Logwin)
 const carriers = [
   {
     name: "DHL",
@@ -85,277 +85,256 @@ const carriers = [
   },
 ];
 
-// tracking data field mapping for uploaded Excel file.
-// reuturns array of mapped data and matching carrier name
-// if no matching carrier is found, returns empty array and "Unknown"
+// vremenske zone za svakog dostavljaca (u minutima)
+const carrierOffsets = {
+  DHL: 60, // GMT+0100
+  Hellman: 120, // GMT+0200
+  Logwin: 120, // GMT+0200
+};
+
+// ocisti string (izbaci prelome reda i duple razmake) da bismo ga lepo uporedili sa nazivima kolona
+const cleanString = (value) => {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replaceAll(/\r|\n/g, " ")
+    .replaceAll("  ", " ");
+};
+
+// proverava da li je dati red zapravo "header" red nekog dostavljaca
+// (header red je onaj ciji se svi nazivi nalaze u listi polja tog dostavljaca)
+const findCarrier = (row) => {
+  const keys = Object.keys(row).filter(
+    (key) => row[key] !== null && row[key] !== undefined
+  );
+  const values = Object.values(row).filter(
+    (value) => value !== null && value !== undefined
+  );
+
+  return carriers.find(
+    (carrier) =>
+      values.every((value) => carrier.fields.includes(cleanString(value))) ||
+      keys.every((key) => carrier.fields.includes(cleanString(key)))
+  );
+};
+
+// ako je vrednost datum, podesi je za vremensku zonu dostavljaca; ako nije validan datum, vrati null
+const adjustDateForCarrier = (value, carrierName) => {
+  const date = new Date(value);
+  const offsetMinutes = carrierOffsets[carrierName] || 0;
+  const adjustedDate = new Date(date.getTime() + offsetMinutes * 60 * 1000);
+  if (isNaN(adjustedDate.getTime())) {
+    return null;
+  }
+  return adjustedDate;
+};
+
+// pretvara jednu vrednost iz excela u vrednost spremnu za bazu
+// - ako je datum -> podesi vremensku zonu
+// - ako je prazno ("") -> null
+// - inace -> vrednost kakva jeste
+const convertValue = (value, carrierName) => {
+  if (isPotentialDate(value)) {
+    return adjustDateForCarrier(value, carrierName);
+  }
+  if (value === "") {
+    return null;
+  }
+  return value;
+};
+
+// pomocna funkcija za tezinu: pretvori u kg, a ako je 0 ili manje vrati null
+const weightOrNull = (value) => {
+  const kg = convertWeight(value);
+  return kg <= 0 ? null : kg;
+};
+
+// vraca samo ona polja iz reda koja NISU vec iskoriscena u glavnom mapiranju
+// (ta dodatna, specificna polja cuvamo u "Additional Info")
+const getAdditionalInfo = (row, usedKeys) => {
+  const additionalInfo = {};
+  Object.keys(row).forEach((key) => {
+    if (!usedKeys.includes(key)) {
+      additionalInfo[key] = row[key];
+    }
+  });
+  return additionalInfo;
+};
+
+// glavna funkcija: ucita excel, prepozna dostavljaca i vrati mapirane podatke za bazu
 export const processExcelFile = (buffer) => {
-  // load the Excel workbook from the provided buffer
   const workbook = XLSX.read(buffer, {
-    type: "buffer", // load the workbook from a buffer
-    cellDates: true, // parse dates in fileds (field will be converted to Date object if possible)
-    sheetStubs: true, // create sheet stubs (empty rows and columns)
+    type: "buffer", // ucitavamo iz buffera
+    cellDates: true, // datumi se parsiraju kao Date objekti
+    sheetStubs: true, // prave se i prazni redovi/kolone
   });
 
-  // process each sheet and return the first matching carrier's tracking data
+  // prolazimo kroz svaki list (sheet) u fajlu
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    const trackingData = XLSX.utils.sheet_to_json(sheet, {
-      defval: null, // default value for empty fields
-    });
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
 
-    let matchingCarrierRow = -1; // index of the row with matching carrier
-    let matchingCarrier = { name: "Unknown", fields: [] }; // matching carrier name (DHL, Hellman, Logwin)
-    let mappedTrackingData = []; // array of final mapped tracking data to store in database
+    // trazimo red u kom se nalaze nazivi kolona nekog dostavljaca
+    let headerRowIndex = -1;
+    let matchingCarrier = null;
 
-    // identify the matching carrier by comparing each row field's tracking data from excel file with carrier fields from mapping array (DHL, Hellman, Logwin)
-    for (const trackingDataItem of trackingData) {
-      matchingCarrierRow++;
-
-      // filter null and undefined values from keys and values
-      const trackingDataKeys = Object.keys(trackingDataItem).filter(
-        (key) =>
-          trackingDataItem[key] !== null && trackingDataItem[key] !== undefined
-      );
-      const trackingDataValues = Object.values(trackingDataItem).filter(
-        (value) => value !== null && value !== undefined
-      );
-
-      // find a carrier whose all fields match either keys or values in the excel file tracking data
-      matchingCarrier = carriers.find(
-        (carrier) =>
-          trackingDataValues.every((value) =>
-            carrier.fields.includes(
-              (value === null || value === undefined ? "" : String(value))
-                .replaceAll(/\r|\n/g, " ") // replace line breaks with spaces
-                .replaceAll("  ", " ") // replace double spaces with single space
-            )
-          ) ||
-          trackingDataKeys.every((key) =>
-            carrier.fields.includes(
-              (key === null || key === undefined ? "" : String(key))
-                .replaceAll(/\r|\n/g, " ")
-                .replaceAll("  ", " ")
-            )
-          )
-      );
-
-      // if a matching carrier is found, break the loop
-      if (matchingCarrier) {
-        break;
+    for (let i = 0; i < rows.length; i++) {
+      const carrier = findCarrier(rows[i]);
+      if (carrier) {
+        matchingCarrier = carrier;
+        headerRowIndex = i;
+        break; // nasli smo dostavljaca, prekidamo petlju
       }
     }
 
-    // If a matching carrier is found, process its tracking data
-    if (matchingCarrier) {
-      // tracking data array from excel file which will then be mapped in predefined fileds and stored in database
-      const retrievedTrackingData = [];
-
-      // extract tracking data starting from the row after the carrier is identified
-      for (
-        let i =
-          matchingCarrierRow + (matchingCarrier.name === "Logwin" ? 0 : 1); // logwin specific offset becuase of different header row within the excel file
-        i < trackingData.length;
-        i++
-      ) {
-        const trackingDataItem = trackingData[i];
-        if (!trackingDataItem) continue;
-
-        // retrieve tracking data object with mapped fields from excel file
-        const retrievedTrackingDataObject = {};
-
-        // map each field from matching carrier fields array to tracking data object in format of { field: value }
-        // if value is a potential date, convert it to Date object with correct timezone for each carrier
-        // if value is not a potential date, pass type as is
-        // if value is empty (""), convert it to null
-        // if value is undefined, convert it to null
-        matchingCarrier.fields.forEach((field, index) => {
-          const value = Object.values(trackingDataItem)[index];
-
-          retrievedTrackingDataObject[field] = isPotentialDate(value)
-            ? (() => {
-                switch (matchingCarrier.name) {
-                  case "Logwin": {
-                    const date = new Date(value);
-                    const offset = +120; // GMT+0200 (Central European Summer Time)
-                    const adjustedDate = new Date(
-                      date.getTime() + offset * 60 * 1000
-                    );
-                    return isNaN(adjustedDate.getTime()) ? null : adjustedDate; // if date is invalid, return null
-                  }
-                  case "DHL": {
-                    const date = new Date(value);
-                    const offset = +60; // GMT+0100 (Central European Standard Time)
-                    const adjustedDate = new Date(
-                      date.getTime() + offset * 60 * 1000
-                    );
-                    return isNaN(adjustedDate.getTime()) ? null : adjustedDate;
-                  }
-                  case "Hellman": {
-                    const date = new Date(value);
-                    const offset = +120; // GMT+0200 (Central European Standard Time)
-                    const adjustedDate = new Date(
-                      date.getTime() + offset * 60 * 1000
-                    );
-                    return isNaN(adjustedDate.getTime()) ? null : adjustedDate;
-                  }
-                  default:
-                    return null;
-                }
-              })()
-            : value === ""
-            ? null
-            : value;
-        });
-
-        // add the mapped object to the tracking data array
-        if (
-          Object.values(retrievedTrackingDataObject).some(
-            (value) =>
-              value !== null &&
-              value !== "" &&
-              (typeof value !== "string" || value.trim() !== "")
-          )
-        ) {
-          retrievedTrackingData.push(retrievedTrackingDataObject);
-        }
-      }
-
-      // form array of final mapped tracking data (predefined fields rules mapping from .csv file) to store in database
-      switch (matchingCarrier.name) {
-        case "DHL":
-          mappedTrackingData = retrievedTrackingData.map(
-            ({
-              "Waybill Number": house,
-              "Shipper Reference Number": shipperRef,
-              Receiver: receiver,
-              Pieces: packages,
-              "Manifested Weight": weight,
-              "Estimated Delivery Date": eta,
-              ...rest
-            }) => ({
-              Status: null,
-              "House AWB": house,
-              Shipper: null,
-              Receiver: null,
-              "PO Number": null,
-              "Shipper Ref. No": shipperRef,
-              ETD: null,
-              ETA: eta,
-              ATD: null,
-              ATA: null,
-              Carrier: null,
-              Packages: packages,
-              Weight: convertWeight(weight) <= 0 ? null : convertWeight(weight), // convert other weight types to kg (ex. lbs to kg, pounds to kg)
-              Volume: null,
-              "Shipper Country": null,
-              Receiver: receiver,
-              "Receiver Country": null,
-              Carrier: matchingCarrier.name,
-              "Inco Term": null,
-              "Flight No": null,
-              "Pick-up Date": null,
-              "Latest Checkpoint": null,
-              "Additional Info": rest,
-            })
-          );
-          break;
-        case "Hellman":
-          mappedTrackingData = retrievedTrackingData.map(
-            ({
-              Status: status,
-              "House AWB": house,
-              "Shipper Name": shipper,
-              "Shipper Country": shipperCountry,
-              "Consignee Name": consignee,
-              "Consignee Country": consigneeCountry,
-              "Flight ETD": etd,
-              "Flight ETA": eta,
-              "Flight ATD": atd,
-              "Flight ATA": ata,
-              "No of Packages": packages,
-              "Gross Weight (Kg)": weight,
-              ...rest
-            }) => ({
-              Status: status,
-              "House AWB": house,
-              Shipper: shipper,
-              Receiver: consignee,
-              "PO Number": null,
-              "Shipper Ref. No": null,
-              ETD: etd,
-              ETA: eta,
-              ATD: atd,
-              ATA: ata,
-              Carrier: matchingCarrier.name,
-              Packages: packages,
-              Weight: convertWeight(weight) <= 0 ? null : convertWeight(weight),
-              Volume: null,
-              "Shipper Country": shipperCountry,
-              "Receiver Country": consigneeCountry,
-              Carrier: matchingCarrier.name,
-              "Inco Term": null,
-              "Flight No": null,
-              "Pick-up Date": null,
-              "Latest Checkpoint": null,
-              "Additional Info": rest,
-            })
-          );
-          break;
-        case "Logwin":
-          mappedTrackingData = retrievedTrackingData.map(
-            ({
-              Status: status,
-              House: house,
-              Shipper: shipper,
-              Consignee: consignee,
-              "PO Number": poNumber,
-              "Shipper Ref.": shipperRef,
-              ETD: etd,
-              ETA: eta,
-              ATD: atd,
-              ATA: ata,
-              Carrier: carrier,
-              Packages: packages,
-              Weight: weight,
-              Volume: volume,
-              ...rest
-            }) => ({
-              Status: status,
-              "House AWB": house,
-              Shipper: shipper,
-              Receiver: consignee,
-              "PO Number": poNumber,
-              "Shipper Ref. No": shipperRef,
-              ETD: etd,
-              ETA: eta,
-              ATD: atd,
-              ATA: ata,
-              Carrier: carrier,
-              Packages: packages,
-              Weight: convertWeight(weight) <= 0 ? null : convertWeight(weight),
-              Volume: volume,
-              "Shipper Country": null,
-              Receiver: null,
-              "Receiver Country": null,
-              Carrier: matchingCarrier.name,
-              "Inco Term": null,
-              "Flight No": null,
-              "Pick-up Date": null,
-              "Latest Checkpoint": null,
-              "Additional Info": rest,
-            })
-          );
-          break;
-      }
-
-      // return final tracking data and matching carrier name
-      return {
-        trackingData: mappedTrackingData,
-        carrier: matchingCarrier.name,
-      };
+    // ako nismo nasli dostavljaca u ovom listu, idemo na sledeci
+    if (!matchingCarrier) {
+      continue;
     }
+
+    // citamo redove sa podacima (posle header reda; Logwin ima drugaciji raspored pa krece od istog reda)
+    const startIndex =
+      headerRowIndex + (matchingCarrier.name === "Logwin" ? 0 : 1);
+    const retrievedTrackingData = [];
+
+    for (let i = startIndex; i < rows.length; i++) {
+      const rowItem = rows[i];
+      if (!rowItem) continue;
+
+      // svaku kolonu iz reda mapiramo na odgovarajuce polje dostavljaca
+      const mappedRow = {};
+      matchingCarrier.fields.forEach((field, index) => {
+        const value = Object.values(rowItem)[index];
+        mappedRow[field] = convertValue(value, matchingCarrier.name);
+      });
+
+      // dodajemo red samo ako nije potpuno prazan
+      const hasSomeValue = Object.values(mappedRow).some(
+        (value) =>
+          value !== null &&
+          value !== "" &&
+          (typeof value !== "string" || value.trim() !== "")
+      );
+      if (hasSomeValue) {
+        retrievedTrackingData.push(mappedRow);
+      }
+    }
+
+    // sada svaki red prevodimo u jedinstveni format baze (mapiranje po pravilima iz mapping.csv)
+    let trackingData = [];
+
+    if (matchingCarrier.name === "DHL") {
+      trackingData = retrievedTrackingData.map((row) => ({
+        Status: null,
+        "House AWB": row["Waybill Number"],
+        Shipper: null,
+        Receiver: row["Receiver"],
+        "PO Number": null,
+        "Shipper Ref. No": row["Shipper Reference Number"],
+        ETD: null,
+        ETA: row["Estimated Delivery Date"],
+        ATD: null,
+        ATA: null,
+        Carrier: matchingCarrier.name,
+        Packages: row["Pieces"],
+        Weight: weightOrNull(row["Manifested Weight"]),
+        Volume: null,
+        "Shipper Country": null,
+        "Receiver Country": null,
+        "Inco Term": null,
+        "Flight No": null,
+        "Pick-up Date": null,
+        "Latest Checkpoint": null,
+        "Additional Info": getAdditionalInfo(row, [
+          "Waybill Number",
+          "Shipper Reference Number",
+          "Receiver",
+          "Pieces",
+          "Manifested Weight",
+          "Estimated Delivery Date",
+        ]),
+      }));
+    } else if (matchingCarrier.name === "Hellman") {
+      trackingData = retrievedTrackingData.map((row) => ({
+        Status: row["Status"],
+        "House AWB": row["House AWB"],
+        Shipper: row["Shipper Name"],
+        Receiver: row["Consignee Name"],
+        "PO Number": null,
+        "Shipper Ref. No": null,
+        ETD: row["Flight ETD"],
+        ETA: row["Flight ETA"],
+        ATD: row["Flight ATD"],
+        ATA: row["Flight ATA"],
+        Carrier: matchingCarrier.name,
+        Packages: row["No of Packages"],
+        Weight: weightOrNull(row["Gross Weight (Kg)"]),
+        Volume: null,
+        "Shipper Country": row["Shipper Country"],
+        "Receiver Country": row["Consignee Country"],
+        "Inco Term": null,
+        "Flight No": null,
+        "Pick-up Date": null,
+        "Latest Checkpoint": null,
+        "Additional Info": getAdditionalInfo(row, [
+          "Status",
+          "House AWB",
+          "Shipper Name",
+          "Shipper Country",
+          "Consignee Name",
+          "Consignee Country",
+          "Flight ETD",
+          "Flight ETA",
+          "Flight ATD",
+          "Flight ATA",
+          "No of Packages",
+          "Gross Weight (Kg)",
+        ]),
+      }));
+    } else if (matchingCarrier.name === "Logwin") {
+      trackingData = retrievedTrackingData.map((row) => ({
+        Status: row["Status"],
+        "House AWB": row["House"],
+        Shipper: row["Shipper"],
+        Receiver: row["Consignee"],
+        "PO Number": row["PO Number"],
+        "Shipper Ref. No": row["Shipper Ref."],
+        ETD: row["ETD"],
+        ETA: row["ETA"],
+        ATD: row["ATD"],
+        ATA: row["ATA"],
+        Carrier: matchingCarrier.name,
+        Packages: row["Packages"],
+        Weight: weightOrNull(row["Weight"]),
+        Volume: row["Volume"],
+        "Shipper Country": null,
+        "Receiver Country": null,
+        "Inco Term": null,
+        "Flight No": null,
+        "Pick-up Date": null,
+        "Latest Checkpoint": null,
+        "Additional Info": getAdditionalInfo(row, [
+          "Status",
+          "House",
+          "Shipper",
+          "Consignee",
+          "PO Number",
+          "Shipper Ref.",
+          "ETD",
+          "ETA",
+          "ATD",
+          "ATA",
+          "Carrier",
+          "Packages",
+          "Weight",
+          "Volume",
+        ]),
+      }));
+    }
+
+    // vracamo gotove podatke i ime prepoznatog dostavljaca
+    return { trackingData, carrier: matchingCarrier.name };
   }
 
-  // if no matching carrier is found, return empty array and "Unknown" carrier
+  // ako nijedan list nije imao prepoznatog dostavljaca
   return { trackingData: [], carrier: "Unknown" };
 };
