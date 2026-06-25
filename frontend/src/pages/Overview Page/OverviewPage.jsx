@@ -10,6 +10,7 @@ import Pagination from "./Pagination";
 import { filterTrackings } from "../../utils/filterTrackingUtils";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ErrorDisplay from "../../components/ErrorDisplay";
+import { API_URL, authHeader } from "../../api";
 
 const OverviewPage = () => {
   const [trackings, setTrackings] = useState([]); // array of tracking data
@@ -44,9 +45,11 @@ const OverviewPage = () => {
   const fetchTrackings = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(
-        "http://localhost:5000/api/trackings/all"
-      );
+      // saljemo token uz zahtev - backend vraca sve posiljke (korisnik)
+      // ili samo posiljke odredjenog dostavljaca (dostavljac)
+      const response = await axios.get(API_URL + "/trackings/all", {
+        headers: authHeader(),
+      });
       if (response.status === 200) {
         setTrackings(response.data);
         setFilteredTrackings(response.data);

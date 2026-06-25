@@ -5,6 +5,7 @@ import Footer from "../../components/Footer";
 import TrackingDetails from "./TrackingDetails";
 import axios from "axios";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { API_URL, authHeader } from "../../api";
 
 const DetailPage = () => {
   const { id } = useParams(); // get id of the tracking from URL
@@ -20,9 +21,9 @@ const DetailPage = () => {
   const fetchTracking = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/trackings/${id}`
-      );
+      const response = await axios.get(API_URL + "/trackings/" + id, {
+        headers: authHeader(),
+      });
       if (response.status === 200) {
         setTracking(response.data);
       }

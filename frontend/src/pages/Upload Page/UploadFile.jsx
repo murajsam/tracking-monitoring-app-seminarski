@@ -3,6 +3,7 @@ import File from "./File";
 import axios from "axios";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { ArrowRight, Import, Upload, ArrowLeft } from "lucide-react";
+import { API_URL, authHeader } from "../../api";
 
 const UploadFile = () => {
   const [step, setStep] = useState(1); // 3 steps, 1: File Upload, 2: Validation, 3: Import
@@ -82,11 +83,12 @@ const UploadFile = () => {
 
         try {
           const response = await axios.post(
-            "http://localhost:5000/api/files/upload",
+            API_URL + "/files/upload",
             formData,
             {
               headers: {
                 "Content-Type": "multipart/form-data",
+                ...authHeader(), // saljemo i token (upload sme samo prijavljen korisnik)
               },
             }
           );
