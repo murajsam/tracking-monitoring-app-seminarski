@@ -7,8 +7,8 @@ import { API_URL } from "../../api";
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("korisnik"); // podrazumevano obican korisnik
-  const [carrier, setCarrier] = useState("DHL"); // bira se samo ako je rola dostavljac
+  const [role, setRole] = useState("user"); // podrazumevano obican korisnik
+  const [carrier, setCarrier] = useState("DHL"); // bira se samo ako je rola carrier
   const [error, setError] = useState("");
 
   const { loginUser } = useAuth();
@@ -23,13 +23,13 @@ const RegisterPage = () => {
         username,
         password,
         role,
-        // dostavljaca saljemo samo ako je izabrana rola "dostavljac"
-        carrier: role === "dostavljac" ? carrier : null,
+        // dostavljaca saljemo samo ako je izabrana rola "carrier"
+        carrier: role === "carrier" ? carrier : null,
       });
       loginUser(response.data);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Greška pri registraciji.");
+      setError(err.response?.data?.message || "Registration failed.");
     }
   };
 
@@ -40,7 +40,7 @@ const RegisterPage = () => {
           <img src="/images/logo.png" alt="Logo" className="h-10 w-auto" />
         </div>
         <h1 className="text-2xl font-bold text-gray-700 text-center mb-6">
-          Registracija
+          Register
         </h1>
 
         {error && (
@@ -52,7 +52,7 @@ const RegisterPage = () => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="text"
-            placeholder="Korisničko ime"
+            placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500"
@@ -60,7 +60,7 @@ const RegisterPage = () => {
           />
           <input
             type="password"
-            placeholder="Lozinka"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500"
@@ -73,12 +73,12 @@ const RegisterPage = () => {
             onChange={(e) => setRole(e.target.value)}
             className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500"
           >
-            <option value="korisnik">Korisnik (uploaduje i vidi sve)</option>
-            <option value="dostavljac">Dostavljač (vidi samo svoje)</option>
+            <option value="user">User (uploads and sees all)</option>
+            <option value="carrier">Carrier (sees only own)</option>
           </select>
 
-          {/* izbor dostavljaca - prikazuje se samo ako je izabrana rola dostavljac */}
-          {role === "dostavljac" && (
+          {/* izbor dostavljaca - prikazuje se samo ako je izabrana rola carrier */}
+          {role === "carrier" && (
             <select
               value={carrier}
               onChange={(e) => setCarrier(e.target.value)}
@@ -94,14 +94,14 @@ const RegisterPage = () => {
             type="submit"
             className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg"
           >
-            Registruj se
+            Sign Up
           </button>
         </form>
 
         <p className="text-center text-gray-600 mt-4">
-          Već imaš nalog?{" "}
+          Already have an account?{" "}
           <Link to="/login" className="text-green-600 font-semibold">
-            Prijavi se
+            Log in
           </Link>
         </p>
       </div>

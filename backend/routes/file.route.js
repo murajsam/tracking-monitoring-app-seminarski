@@ -6,12 +6,12 @@ import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 const router = Router();
 const upload = multer({ dest: "uploads/" });
 
-// upload sme samo prijavljen korisnik sa rolom "korisnik" (dostavljaci ne smeju da uploaduju)
+// upload sme samo prijavljen korisnik sa rolom "user" (carrier ne sme da uploaduje)
 // route for uploading file and importing it's tracking data into database (post method)
 router.post(
   "/upload",
   requireAuth,
-  requireRole("korisnik"),
+  requireRole("user"),
   upload.single("file"),
   uploadFile
 );

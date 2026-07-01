@@ -6,9 +6,9 @@ export const getTrackings = async (req, res) => {
     // pravimo filter za pretragu baze
     const filter = {};
 
-    // ako je prijavljen "dostavljac", prikazujemo SAMO posiljke njegovog dostavljaca
-    // ("korisnik" vidi sve, pa za njega filter ostaje prazan)
-    if (req.user.role === "dostavljac") {
+    // ako je prijavljen "carrier", prikazujemo SAMO posiljke njegovog dostavljaca
+    // ("user" vidi sve, pa za njega filter ostaje prazan)
+    if (req.user.role === "carrier") {
       filter["data.Carrier"] = req.user.carrier;
     }
 
@@ -30,17 +30,17 @@ export const getTrackingById = async (req, res) => {
     const tracking = await Tracking.findById(id);
 
     if (!tracking) {
-      return res.status(404).json({ message: "Posiljka nije pronadjena." });
+      return res.status(404).json({ message: "Shipment not found." });
     }
 
-    // dostavljac sme da vidi detalje samo svojih posiljki
+    // carrier sme da vidi detalje samo svojih posiljki
     if (
-      req.user.role === "dostavljac" &&
+      req.user.role === "carrier" &&
       tracking.data.Carrier !== req.user.carrier
     ) {
       return res
         .status(403)
-        .json({ message: "Nemate pristup ovoj posiljci." });
+        .json({ message: "You don't have access to this shipment." });
     }
 
     return res.status(200).json(tracking);

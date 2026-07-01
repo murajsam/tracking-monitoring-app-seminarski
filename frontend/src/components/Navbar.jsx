@@ -52,8 +52,8 @@ const Navbar = () => {
           isOpen ? "block" : "hidden"
         } sm:flex flex-col sm:flex-row sm:items-center sm:w-auto mt-4 sm:mt-0 space-y-4 sm:space-y-0 sm:space-x-6 sm:mr-0 mr-6`}
       >
-        {/* Upload link vidi samo rola "korisnik" (dostavljac ne sme da uploaduje) */}
-        {user && user.role === "korisnik" && (
+        {/* Upload link vidi samo rola "user" (carrier ne sme da uploaduje) */}
+        {user && user.role === "user" && (
           <a
             href="/"
             className="text-gray-700 hover:text-green-500 flex items-center gap-1 justify-center"
@@ -77,14 +77,14 @@ const Navbar = () => {
               <User className="w-5 h-5" />
               {user.username}
               <span className="text-gray-400">
-                ({user.role === "dostavljac" ? user.carrier : "korisnik"})
+                ({user.role === "carrier" ? user.carrier : "user"})
               </span>
             </span>
             <button
               onClick={handleLogout}
               className="text-red-500 hover:text-red-600 flex items-center gap-1"
             >
-              Odjava
+              Logout
               <LogOut className="w-5 h-5" />
             </button>
           </div>

@@ -14,14 +14,14 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     // dve role:
-    //  - "korisnik"   -> uploaduje fajlove i vidi sve posiljke
-    //  - "dostavljac" -> vidi SAMO posiljke svog dostavljaca
+    //  - "user"    -> uploaduje fajlove i vidi sve posiljke
+    //  - "carrier" -> vidi SAMO posiljke svog dostavljaca
     role: {
       type: String,
-      enum: ["korisnik", "dostavljac"],
-      default: "korisnik",
+      enum: ["user", "carrier"],
+      default: "user",
     },
-    // koji je dostavljac u pitanju (samo za rolu "dostavljac"): DHL, Hellman ili Logwin
+    // koji je dostavljac u pitanju (samo za rolu "carrier"): DHL, Hellman ili Logwin
     carrier: {
       type: String,
       enum: ["DHL", "Hellman", "Logwin", null],

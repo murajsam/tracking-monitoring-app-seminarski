@@ -18,11 +18,11 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* upload sme samo rola "korisnik" */}
+          {/* upload sme samo rola "user" */}
           <Route
             path="/"
             element={
-              <ProtectedRoute allowedRole="korisnik">
+              <ProtectedRoute allowedRole="user">
                 <UploadPage />
               </ProtectedRoute>
             }
@@ -30,13 +30,13 @@ const App = () => {
           <Route
             path="/upload"
             element={
-              <ProtectedRoute allowedRole="korisnik">
+              <ProtectedRoute allowedRole="user">
                 <UploadPage />
               </ProtectedRoute>
             }
           />
 
-          {/* pregled i detalji - svaki prijavljen korisnik (dostavljac vidi samo svoje) */}
+          {/* pregled i detalji - svaki prijavljen korisnik (carrier vidi samo svoje) */}
           <Route
             path="/overview"
             element={

@@ -5,7 +5,7 @@ export const requireAuth = (req, res, next) => {
   // token stize u zaglavlju kao "Authorization: Bearer <token>"
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return res.status(401).json({ message: "Niste prijavljeni." });
+    return res.status(401).json({ message: "You are not logged in." });
   }
 
   // uzimamo samo deo posle reci "Bearer "
@@ -17,7 +17,7 @@ export const requireAuth = (req, res, next) => {
     req.user = decoded; // { id, username, role, carrier }
     next(); // sve je ok, idemo dalje
   } catch (error) {
-    return res.status(401).json({ message: "Token nije validan." });
+    return res.status(401).json({ message: "Invalid token." });
   }
 };
 
@@ -25,7 +25,9 @@ export const requireAuth = (req, res, next) => {
 export const requireRole = (role) => {
   return (req, res, next) => {
     if (req.user.role !== role) {
-      return res.status(403).json({ message: "Nemate dozvolu za ovu akciju." });
+      return res
+        .status(403)
+        .json({ message: "You don't have permission for this action." });
     }
     next();
   };

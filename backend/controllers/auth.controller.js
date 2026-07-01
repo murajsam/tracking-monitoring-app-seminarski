@@ -24,20 +24,20 @@ export const register = async (req, res) => {
     if (!username || !password) {
       return res
         .status(400)
-        .json({ message: "Korisnicko ime i lozinka su obavezni." });
+        .json({ message: "Username and password are required." });
     }
 
     // provera da li korisnicko ime vec postoji
     const existingUser = await User.findOne({ username });
     if (existingUser) {
-      return res.status(400).json({ message: "Korisnicko ime je vec zauzeto." });
+      return res.status(400).json({ message: "Username is already taken." });
     }
 
-    // ako je rola "dostavljac", mora da se izabere koji je dostavljac
-    if (role === "dostavljac" && !carrier) {
+    // ako je rola "carrier", mora da se izabere koji je dostavljac
+    if (role === "carrier" && !carrier) {
       return res
         .status(400)
-        .json({ message: "Dostavljac mora izabrati DHL, Hellman ili Logwin." });
+        .json({ message: "Carrier must choose DHL, Hellman or Logwin." });
     }
 
     // hesiranje lozinke da se ne cuva kao obican tekst
@@ -46,14 +46,14 @@ export const register = async (req, res) => {
     const newUser = new User({
       username,
       password: hashedPassword,
-      role: role || "korisnik",
-      carrier: role === "dostavljac" ? carrier : null,
+      role: role || "user",
+      carrier: role === "carrier" ? carrier : null,
     });
     await newUser.save();
 
     const token = createToken(newUser);
     return res.status(201).json({
-      message: "Uspesna registracija.",
+      message: "Registration successful.",
       token,
       user: {
         username: newUser.username,
@@ -62,8 +62,8 @@ export const register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Greska pri registraciji:", error.message);
-    return res.status(500).json({ message: "Greska na serveru." });
+    console.error("Registration error:", error.message);
+    return res.status(500).json({ message: "Server error." });
   }
 };
 
@@ -76,7 +76,7 @@ export const login = async (req, res) => {
     if (!user) {
       return res
         .status(400)
-        .json({ message: "Pogresno korisnicko ime ili lozinka." });
+        .json({ message: "Wrong username or password." });
     }
 
     // poredimo unetu lozinku sa hesiranom lozinkom iz baze
@@ -84,12 +84,12 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res
         .status(400)
-        .json({ message: "Pogresno korisnicko ime ili lozinka." });
+        .json({ message: "Wrong username or password." });
     }
 
     const token = createToken(user);
     return res.status(200).json({
-      message: "Uspesna prijava.",
+      message: "Login successful.",
       token,
       user: {
         username: user.username,
@@ -98,7 +98,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Greska pri prijavi:", error.message);
-    return res.status(500).json({ message: "Greska na serveru." });
+    console.error("Login error:", error.message);
+    return res.status(500).json({ message: "Server error." });
   }
 };

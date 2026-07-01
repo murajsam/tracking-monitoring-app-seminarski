@@ -25,7 +25,7 @@ const LoginPage = () => {
       loginUser(response.data);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Greska pri prijavi.");
+      setError(err.response?.data?.message || "Login failed.");
     }
   };
 
@@ -36,7 +36,7 @@ const LoginPage = () => {
           <img src="/images/logo.png" alt="Logo" className="h-10 w-auto" />
         </div>
         <h1 className="text-2xl font-bold text-gray-700 text-center mb-6">
-          Prijava
+          Login
         </h1>
 
         {error && (
@@ -48,7 +48,7 @@ const LoginPage = () => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="text"
-            placeholder="Korisničko ime"
+            placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500"
@@ -56,7 +56,7 @@ const LoginPage = () => {
           />
           <input
             type="password"
-            placeholder="Lozinka"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500"
@@ -66,14 +66,14 @@ const LoginPage = () => {
             type="submit"
             className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg"
           >
-            Prijavi se
+            Log In
           </button>
         </form>
 
         <p className="text-center text-gray-600 mt-4">
-          Nemaš nalog?{" "}
+          Don't have an account?{" "}
           <Link to="/register" className="text-green-600 font-semibold">
-            Registruj se
+            Sign up
           </Link>
         </p>
       </div>
