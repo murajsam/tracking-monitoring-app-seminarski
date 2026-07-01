@@ -88,7 +88,7 @@ const UploadFile = () => {
             {
               headers: {
                 "Content-Type": "multipart/form-data",
-                ...authHeader(), // saljemo i token (upload sme samo prijavljen korisnik)
+                ...authHeader(), // also send the token (only a logged-in user may upload)
               },
             }
           );

@@ -3,11 +3,11 @@ import Tracking from "../models/tracking.model.js";
 // get all tracking data from database
 export const getTrackings = async (req, res) => {
   try {
-    // pravimo filter za pretragu baze
+    // build the query filter
     const filter = {};
 
-    // ako je prijavljen "carrier", prikazujemo SAMO posiljke njegovog dostavljaca
-    // ("user" vidi sve, pa za njega filter ostaje prazan)
+    // if a "carrier" is logged in, show ONLY its own carrier's shipments
+    // ("user" sees everything, so the filter stays empty)
     if (req.user.role === "carrier") {
       filter["data.Carrier"] = req.user.carrier;
     }
@@ -33,7 +33,7 @@ export const getTrackingById = async (req, res) => {
       return res.status(404).json({ message: "Shipment not found." });
     }
 
-    // carrier sme da vidi detalje samo svojih posiljki
+    // a carrier may see details only of its own shipments
     if (
       req.user.role === "carrier" &&
       tracking.data.Carrier !== req.user.carrier

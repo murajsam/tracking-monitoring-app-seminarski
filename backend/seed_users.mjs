@@ -1,5 +1,5 @@
-// jednokratna skripta: migrira stare role i postavlja poznate naloge za demo/screenshotove
-// pokretanje:  node seed_users.mjs
+// one-off script: migrates old role names and seeds a few demo accounts
+// run:  node seed_users.mjs
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
@@ -10,7 +10,7 @@ dotenv.config();
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/tracking";
 
-// nalozi koje uvek zelimo da postoje (sa poznatim lozinkama)
+// accounts we always want to exist (with known passwords)
 const demoUsers = [
   { username: "djordje", password: "djordje123", role: "user", carrier: null },
   { username: "dhl_user", password: "dhl123", role: "carrier", carrier: "DHL" },
@@ -22,12 +22,12 @@ async function run() {
   await mongoose.connect(MONGO_URI);
   console.log("Connected to", MONGO_URI);
 
-  // 1) migracija starih rola na nove nazive
+  // 1) migrate old role names to the new ones
   const m1 = await User.updateMany({ role: "korisnik" }, { $set: { role: "user" } });
   const m2 = await User.updateMany({ role: "dostavljac" }, { $set: { role: "carrier" } });
   console.log(`Migrated roles: korisnik->user (${m1.modifiedCount}), dostavljac->carrier (${m2.modifiedCount})`);
 
-  // 2) upsert demo naloga sa hesiranom lozinkom
+  // 2) upsert demo accounts with a hashed password
   for (const u of demoUsers) {
     const hashed = await bcrypt.hash(u.password, 10);
     await User.findOneAndUpdate(
@@ -38,7 +38,7 @@ async function run() {
     console.log(`Upserted: ${u.username} (${u.role}${u.carrier ? "/" + u.carrier : ""})`);
   }
 
-  // 3) ispis svih korisnika radi provere
+  // 3) print all users for a quick check
   const all = await User.find({}, "username role carrier");
   console.log("\nAll users:");
   all.forEach((x) => console.log(` - ${x.username} | ${x.role} | ${x.carrier || "-"}`));

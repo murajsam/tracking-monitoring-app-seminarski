@@ -32,7 +32,7 @@ app.get("/", (req, res) => {
 });
 
 // api routes
-app.use("/api/auth", authRoutes); // rute za registraciju i prijavu korisnika
+app.use("/api/auth", authRoutes); // routes for user registration and login
 app.use("/api/files", fileRoutes); // route for file upload and tracking data import
 app.use("/api/trackings", trackingRoutes); // route for getting tracking data from database
 

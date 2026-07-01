@@ -45,8 +45,8 @@ const OverviewPage = () => {
   const fetchTrackings = async () => {
     setIsLoading(true);
     try {
-      // saljemo token uz zahtev - backend vraca sve posiljke (korisnik)
-      // ili samo posiljke odredjenog dostavljaca (dostavljac)
+      // send the token with the request - backend returns all shipments (user)
+      // or only a specific carrier's shipments (carrier)
       const response = await axios.get(API_URL + "/trackings/all", {
         headers: authHeader(),
       });

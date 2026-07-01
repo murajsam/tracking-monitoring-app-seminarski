@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
-// pravi token za korisnika (vazi 7 dana)
+// create a token for the user (valid for 7 days)
 const createToken = (user) => {
   return jwt.sign(
     {
@@ -16,7 +16,7 @@ const createToken = (user) => {
   );
 };
 
-// registracija novog korisnika
+// register a new user
 export const register = async (req, res) => {
   try {
     const { username, password, role, carrier } = req.body;
@@ -27,20 +27,20 @@ export const register = async (req, res) => {
         .json({ message: "Username and password are required." });
     }
 
-    // provera da li korisnicko ime vec postoji
+    // check if the username already exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: "Username is already taken." });
     }
 
-    // ako je rola "carrier", mora da se izabere koji je dostavljac
+    // if the role is "carrier", a carrier must be selected
     if (role === "carrier" && !carrier) {
       return res
         .status(400)
         .json({ message: "Carrier must choose DHL, Hellman or Logwin." });
     }
 
-    // hesiranje lozinke da se ne cuva kao obican tekst
+    // hash the password so it isn't stored as plain text
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
@@ -67,7 +67,7 @@ export const register = async (req, res) => {
   }
 };
 
-// prijava (login) postojeceg korisnika
+// login an existing user
 export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -79,7 +79,7 @@ export const login = async (req, res) => {
         .json({ message: "Wrong username or password." });
     }
 
-    // poredimo unetu lozinku sa hesiranom lozinkom iz baze
+    // compare the entered password with the hashed one from the database
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res

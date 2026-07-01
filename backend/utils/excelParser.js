@@ -1,7 +1,7 @@
 import XLSX from "xlsx";
 import { convertWeight, isPotentialDate } from "./dataConverters.js";
 
-// nazivi kolona koje ocekujemo u excel fajlu za svakog dostavljaca (DHL, Hellman, Logwin)
+// expected column names in the excel file for each carrier (DHL, Hellman, Logwin)
 const carriers = [
   {
     name: "DHL",
@@ -85,14 +85,14 @@ const carriers = [
   },
 ];
 
-// vremenske zone za svakog dostavljaca (u minutima)
+// time zones for each carrier (in minutes)
 const carrierOffsets = {
   DHL: 60, // GMT+0100
   Hellman: 120, // GMT+0200
   Logwin: 120, // GMT+0200
 };
 
-// ocisti string (izbaci prelome reda i duple razmake) da bismo ga lepo uporedili sa nazivima kolona
+// clean a string (strip line breaks and double spaces) so it compares nicely to column names
 const cleanString = (value) => {
   if (value === null || value === undefined) return "";
   return String(value)
@@ -100,8 +100,8 @@ const cleanString = (value) => {
     .replaceAll("  ", " ");
 };
 
-// proverava da li je dati red zapravo "header" red nekog dostavljaca
-// (header red je onaj ciji se svi nazivi nalaze u listi polja tog dostavljaca)
+// checks whether the given row is actually a carrier's "header" row
+// (a header row is one whose names all appear in that carrier's field list)
 const findCarrier = (row) => {
   const keys = Object.keys(row).filter(
     (key) => row[key] !== null && row[key] !== undefined
@@ -117,7 +117,7 @@ const findCarrier = (row) => {
   );
 };
 
-// ako je vrednost datum, podesi je za vremensku zonu dostavljaca; ako nije validan datum, vrati null
+// if the value is a date, adjust it to the carrier's time zone; if not a valid date, return null
 const adjustDateForCarrier = (value, carrierName) => {
   const date = new Date(value);
   const offsetMinutes = carrierOffsets[carrierName] || 0;
@@ -128,10 +128,10 @@ const adjustDateForCarrier = (value, carrierName) => {
   return adjustedDate;
 };
 
-// pretvara jednu vrednost iz excela u vrednost spremnu za bazu
-// - ako je datum -> podesi vremensku zonu
-// - ako je prazno ("") -> null
-// - inace -> vrednost kakva jeste
+// converts a single excel value into a value ready for the database
+// - if it's a date -> adjust the time zone
+// - if it's empty ("") -> null
+// - otherwise -> the value as is
 const convertValue = (value, carrierName) => {
   if (isPotentialDate(value)) {
     return adjustDateForCarrier(value, carrierName);
@@ -142,14 +142,14 @@ const convertValue = (value, carrierName) => {
   return value;
 };
 
-// pomocna funkcija za tezinu: pretvori u kg, a ako je 0 ili manje vrati null
+// weight helper: convert to kg, and if 0 or less return null
 const weightOrNull = (value) => {
   const kg = convertWeight(value);
   return kg <= 0 ? null : kg;
 };
 
-// vraca samo ona polja iz reda koja NISU vec iskoriscena u glavnom mapiranju
-// (ta dodatna, specificna polja cuvamo u "Additional Info")
+// returns only the row fields that are NOT already used in the main mapping
+// (these extra, carrier-specific fields are kept in "Additional Info")
 const getAdditionalInfo = (row, usedKeys) => {
   const additionalInfo = {};
   Object.keys(row).forEach((key) => {
@@ -160,12 +160,12 @@ const getAdditionalInfo = (row, usedKeys) => {
   return additionalInfo;
 };
 
-// glavna funkcija: ucita excel, prepozna dostavljaca i vrati mapirane podatke za bazu
+// main function: read the excel, detect the carrier and return data mapped for the database
 export const processExcelFile = (buffer) => {
   const workbook = XLSX.read(buffer, {
-    type: "buffer", // ucitavamo iz buffera
-    cellDates: true, // datumi se parsiraju kao Date objekti
-    sheetStubs: true, // prave se i prazni redovi/kolone
+    type: "buffer", // read from the buffer
+    cellDates: true, // dates are parsed as Date objects
+    sheetStubs: true, // empty rows/columns are created too
   });
 
   // prolazimo kroz svaki list (sheet) u fajlu
@@ -173,7 +173,7 @@ export const processExcelFile = (buffer) => {
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
 
-    // trazimo red u kom se nalaze nazivi kolona nekog dostavljaca
+    // find the row that holds a carrier's column names
     let headerRowIndex = -1;
     let matchingCarrier = null;
 
@@ -182,16 +182,16 @@ export const processExcelFile = (buffer) => {
       if (carrier) {
         matchingCarrier = carrier;
         headerRowIndex = i;
-        break; // nasli smo dostavljaca, prekidamo petlju
+        break; // found the carrier, break the loop
       }
     }
 
-    // ako nismo nasli dostavljaca u ovom listu, idemo na sledeci
+    // if we didn't find a carrier in this sheet, move to the next
     if (!matchingCarrier) {
       continue;
     }
 
-    // citamo redove sa podacima (posle header reda; Logwin ima drugaciji raspored pa krece od istog reda)
+    // read the data rows (after the header row; Logwin has a different layout so it starts from the same row)
     const startIndex =
       headerRowIndex + (matchingCarrier.name === "Logwin" ? 0 : 1);
     const retrievedTrackingData = [];
@@ -200,14 +200,14 @@ export const processExcelFile = (buffer) => {
       const rowItem = rows[i];
       if (!rowItem) continue;
 
-      // svaku kolonu iz reda mapiramo na odgovarajuce polje dostavljaca
+      // map each column of the row to the carrier's matching field
       const mappedRow = {};
       matchingCarrier.fields.forEach((field, index) => {
         const value = Object.values(rowItem)[index];
         mappedRow[field] = convertValue(value, matchingCarrier.name);
       });
 
-      // dodajemo red samo ako nije potpuno prazan
+      // add the row only if it isn't completely empty
       const hasSomeValue = Object.values(mappedRow).some(
         (value) =>
           value !== null &&
@@ -219,7 +219,7 @@ export const processExcelFile = (buffer) => {
       }
     }
 
-    // sada svaki red prevodimo u jedinstveni format baze (mapiranje po pravilima iz mapping.csv)
+    // now translate each row into the unified database format (mapping rules)
     let trackingData = [];
 
     if (matchingCarrier.name === "DHL") {
@@ -331,10 +331,10 @@ export const processExcelFile = (buffer) => {
       }));
     }
 
-    // vracamo gotove podatke i ime prepoznatog dostavljaca
+    // return the finished data and the name of the detected carrier
     return { trackingData, carrier: matchingCarrier.name };
   }
 
-  // ako nijedan list nije imao prepoznatog dostavljaca
+  // if no sheet had a recognized carrier
   return { trackingData: [], carrier: "Unknown" };
 };

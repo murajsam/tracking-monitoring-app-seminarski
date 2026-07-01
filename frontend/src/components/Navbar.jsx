@@ -8,7 +8,7 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // odjava - brisemo korisnika i vodimo ga na stranicu za prijavu
+  // logout - clear the user and go to the login page
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -23,7 +23,7 @@ const Navbar = () => {
         </a>
       </div>
 
-      {/* hamburger dugme za mobilni prikaz */}
+      {/* hamburger button for mobile */}
       <div className="sm:hidden">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -46,13 +46,13 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* meni */}
+      {/* menu */}
       <div
         className={`${
           isOpen ? "block" : "hidden"
         } sm:flex flex-col sm:flex-row sm:items-center sm:w-auto mt-4 sm:mt-0 space-y-4 sm:space-y-0 sm:space-x-6 sm:mr-0 mr-6`}
       >
-        {/* Upload link vidi samo rola "user" (carrier ne sme da uploaduje) */}
+        {/* Upload link is visible only to role "user" (carrier cannot upload) */}
         {user && user.role === "user" && (
           <a
             href="/"
@@ -70,7 +70,7 @@ const Navbar = () => {
           Overview <ArrowRight className="w-5 h-5" />
         </a>
 
-        {/* podaci o prijavljenom korisniku + dugme za odjavu */}
+        {/* logged-in user info + logout button */}
         {user && (
           <div className="flex items-center gap-3 justify-center">
             <span className="text-gray-600 text-base flex items-center gap-1">

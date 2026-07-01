@@ -7,14 +7,14 @@ import { API_URL } from "../../api";
 const RegisterPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user"); // podrazumevano obican korisnik
-  const [carrier, setCarrier] = useState("DHL"); // bira se samo ako je rola carrier
+  const [role, setRole] = useState("user"); // default: regular user
+  const [carrier, setCarrier] = useState("DHL"); // only used if the role is carrier
   const [error, setError] = useState("");
 
   const { loginUser } = useAuth();
   const navigate = useNavigate();
 
-  // salje podatke za registraciju na backend
+  // send registration data to the backend
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
@@ -23,7 +23,7 @@ const RegisterPage = () => {
         username,
         password,
         role,
-        // dostavljaca saljemo samo ako je izabrana rola "carrier"
+        // only send carrier if the "carrier" role is selected
         carrier: role === "carrier" ? carrier : null,
       });
       loginUser(response.data);
@@ -67,7 +67,7 @@ const RegisterPage = () => {
             required
           />
 
-          {/* izbor role */}
+          {/* role selection */}
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
@@ -77,7 +77,7 @@ const RegisterPage = () => {
             <option value="carrier">Carrier (sees only own)</option>
           </select>
 
-          {/* izbor dostavljaca - prikazuje se samo ako je izabrana rola carrier */}
+          {/* carrier selection - shown only if the carrier role is selected */}
           {role === "carrier" && (
             <select
               value={carrier}

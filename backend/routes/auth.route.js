@@ -3,9 +3,9 @@ import { register, login } from "../controllers/auth.controller.js";
 
 const router = Router();
 
-// ruta za registraciju novog korisnika (post metoda)
+// route to register a new user (post method)
 router.post("/register", register);
-// ruta za prijavu (login) korisnika (post metoda)
+// route to log in a user (post method)
 router.post("/login", login);
 
 export default router;

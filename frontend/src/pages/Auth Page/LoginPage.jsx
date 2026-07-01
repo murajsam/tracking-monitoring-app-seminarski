@@ -12,7 +12,7 @@ const LoginPage = () => {
   const { loginUser } = useAuth();
   const navigate = useNavigate();
 
-  // salje podatke za prijavu na backend
+  // send login data to the backend
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
@@ -21,7 +21,7 @@ const LoginPage = () => {
         username,
         password,
       });
-      // cuvamo token i korisnika, pa ga vodimo na pocetnu stranu
+      // save the token and user, then go to the home page
       loginUser(response.data);
       navigate("/");
     } catch (err) {

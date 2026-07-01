@@ -10,15 +10,15 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const App = () => {
   return (
-    // AuthProvider omotava celu aplikaciju da svuda znamo ko je prijavljen
+    // AuthProvider wraps the whole app so we always know who is logged in
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* javne stranice - prijava i registracija */}
+          {/* public pages - login and register */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* upload sme samo rola "user" */}
+          {/* only role "user" may upload */}
           <Route
             path="/"
             element={
@@ -36,7 +36,7 @@ const App = () => {
             }
           />
 
-          {/* pregled i detalji - svaki prijavljen korisnik (carrier vidi samo svoje) */}
+          {/* overview and details - any logged-in user (carrier sees only its own) */}
           <Route
             path="/overview"
             element={

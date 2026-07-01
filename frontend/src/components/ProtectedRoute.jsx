@@ -2,22 +2,22 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// komponenta koja stiti rute - pusta samo prijavljene korisnike
-// ako ruta trazi odredjenu rolu (allowedRole), pusta samo tu rolu
+// route guard - allows only logged-in users
+// if the route requires a role (allowedRole), only that role is allowed
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user } = useAuth();
 
-  // ako korisnik nije prijavljen, saljemo ga na stranicu za prijavu
+  // if the user isn't logged in, send them to the login page
   if (!user) {
     return <Navigate to="/login" />;
   }
 
-  // ako ruta trazi odredjenu rolu a korisnik je nema, saljemo ga na pregled
+  // if the route requires a role the user doesn't have, send them to the overview
   if (allowedRole && user.role !== allowedRole) {
     return <Navigate to="/overview" />;
   }
 
-  // sve je ok - prikazujemo trazenu stranicu
+  // all good - render the requested page
   return children;
 };
 

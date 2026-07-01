@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// model korisnika za prijavu i registraciju
+// user model for login and registration
 const userSchema = new mongoose.Schema(
   {
     username: {
@@ -8,20 +8,20 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    // lozinka se cuva hesirano (nikad kao obican tekst)
+    // password is stored hashed (never as plain text)
     password: {
       type: String,
       required: true,
     },
-    // dve role:
-    //  - "user"    -> uploaduje fajlove i vidi sve posiljke
-    //  - "carrier" -> vidi SAMO posiljke svog dostavljaca
+    // two roles:
+    //  - "user"    -> uploads files and sees all shipments
+    //  - "carrier" -> sees ONLY its own carrier's shipments
     role: {
       type: String,
       enum: ["user", "carrier"],
       default: "user",
     },
-    // koji je dostavljac u pitanju (samo za rolu "carrier"): DHL, Hellman ili Logwin
+    // which carrier this is (only for role "carrier"): DHL, Hellman or Logwin
     carrier: {
       type: String,
       enum: ["DHL", "Hellman", "Logwin", null],
