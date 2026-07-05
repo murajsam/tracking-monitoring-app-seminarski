@@ -2,8 +2,13 @@
 
 This is a web application that allows users to upload tracking data from excel files (examples can be found in `excel examples` folder) and view it in a user-friendly interface. The application is built using MERN stack (MongoDB, Express.js, React.js, and Node.js) and uses the `xlsx` and `node-xlsx` libraries to read from Excel files. Database stores tracking data from 3 different carriers: DHL, Hellman, and Logwin. Tracking data is stored in predefined format by performing specific mapping rules for each carrier. Mapping rules can be found in `mapping.csv` file.
 
+The application also has user authentication (registration and login with JWT tokens) and two roles: a regular **user** who uploads Excel files and sees all shipments, and a **carrier** who cannot upload and sees only the shipments of his own carrier (DHL, Hellman or Logwin).
+
 ## Features
 
+- User registration and login (JWT token, passwords hashed with bcrypt)
+- Two roles: `user` (uploads files, sees all shipments) and `carrier` (sees only its own carrier's shipments, cannot upload)
+- Protected routes on both frontend (React route guard) and backend (auth middleware)
 - Upload tracking data from Excel files (.xlsx, .xls)
 - Validate tracking data and import it into MongoDB Atlas cloud database (DHL, Hellman, Logwin)
 - Upload history of Excel files in MongoDB Atlas cloud database
@@ -51,28 +56,37 @@ To map tracking data for carriers (`DHL`, `Hellman`, `Logwin`) based on predefin
 
 ## Pages
 
-The application has three main pages:
+The application has five pages:
 
-1. **Upload Page / Home Page**:
-   This page allows users to upload Excel files containing tracking data. There are three steps in the upload process: File Upload, Validation, and Import. The user can see the progress of each step. On the first step, the user can select multiple files at once or drag and drop files into the page and can also delete or add more files. On the second step, the user can no longer add or delete files. Lastly, on the third step, the files are being validated and tracking data is being imported into the database. Once the import is complete, the user can see the results of the imported files (each file shows the indentified carrier, number of imported rows, duplicated rows, and success rate).
+1. **Login / Register Pages**:
+   These pages are public. On the register page the user picks a username, a password and a role (`user` or `carrier`). If the role is `carrier`, one of the carriers (DHL, Hellman, Logwin) must be selected. After login/registration the user gets a JWT token and is redirected into the application. All other pages require the user to be logged in.
 
-2. **Overview Page**:
-   This page displays a table of all imported tracking data from files. The user can filter the data based on carrier, status, shipper, weight, date range, and search. The table also provides links to the Detail Page for each tracking.
+2. **Upload Page / Home Page**:
+   This page allows users to upload Excel files containing tracking data. Only the role `user` can open this page (a carrier is redirected to the overview). There are three steps in the upload process: File Upload, Validation, and Import. The user can see the progress of each step. On the first step, the user can select multiple files at once or drag and drop files into the page and can also delete or add more files. On the second step, the user can no longer add or delete files. Lastly, on the third step, the files are being validated and tracking data is being imported into the database. Once the import is complete, the user can see the results of the imported files (each file shows the indentified carrier, number of imported rows, duplicated rows, and success rate).
 
-3. **Detail Page**:
-   This page displays detailed information for a selected tracking. The user can see the file name, carrier, status, and additional information. The user can also see the tracking data in a table format.
+3. **Overview Page**:
+   This page displays a table of all imported tracking data from files. A `user` sees the shipments of all carriers, while a `carrier` sees only the shipments of his own carrier. The user can filter the data based on carrier, status, shipper, weight, date range, and search. The table also provides links to the Detail Page for each tracking.
+
+4. **Detail Page**:
+   This page displays detailed information for a selected tracking. The user can see the file name, carrier, status, and additional information. The user can also see the tracking data in a table format. A carrier can open details only of his own shipments.
 
 ## Backend API
 
 The backend API is a Node.js application that handles the file upload and import. It uses the `xlsx` and `node-xlsx` libraries to read Excel files.
 
-The API exposes three endpoints:
+The API exposes these endpoints:
 
-- `POST /api/files/upload`: This endpoint is used to upload Excel file and store it and it's tracking data in the database.
+- `POST /api/auth/register`: Registers a new user (username, password, role and carrier if the role is `carrier`). Returns a JWT token and the user data.
 
-- `GET /api/trackings/:id`: This endpoint is used to retrieve tracking data for a specific tracking. It accepts a parameter `:id` representing the tracking ID. The API returns the tracking data in JSON format.
+- `POST /api/auth/login`: Logs in an existing user. Returns a JWT token and the user data.
 
-- `GET /api/trackings/all`: This endpoint is used to retrieve all tracking data. It returns a JSON array of tracking data.
+- `POST /api/files/upload`: This endpoint is used to upload Excel file and store it and it's tracking data in the database. Requires a logged-in user with role `user` (a carrier gets 403).
+
+- `GET /api/trackings/:id`: This endpoint is used to retrieve tracking data for a specific tracking. It accepts a parameter `:id` representing the tracking ID. The API returns the tracking data in JSON format. A carrier can get only his own carrier's shipment.
+
+- `GET /api/trackings/all`: This endpoint is used to retrieve all tracking data. It returns a JSON array of tracking data. For a carrier the list is filtered to his own carrier only.
+
+All `/api/files` and `/api/trackings` routes require the header `Authorization: Bearer <token>` (the token is received on login/registration).
 
 ## How to Run the Application
 
@@ -84,25 +98,74 @@ To deploy the application, you need to have Node.js and npm installed on your sy
 
 3. Navigate to the `frontend` directory and install the dependencies by running `npm install`.
 
-4. Start the backend API by running `npm run dev` in the `backend` directory.
+4. In the `backend` directory create a `.env` file (there is an example in `.env.example`) with `PORT`, `MONGO_URI` (local MongoDB or MongoDB Atlas connection string) and `JWT_SECRET`.
 
-5. Start the frontend application by running `npm start` in the `frontend` directory.
+5. (Optional) Run `node seed_users.mjs` in the `backend` directory to create demo accounts:
+
+   | Username       | Password     | Role    | Carrier |
+   | -------------- | ------------ | ------- | ------- |
+   | `djordje`      | `djordje123` | user    | -       |
+   | `dhl_user`     | `dhl123`     | carrier | DHL     |
+   | `hellman_user` | `hellman123` | carrier | Hellman |
+   | `logwin_user`  | `logwin123`  | carrier | Logwin  |
+
+6. Start the backend API by running `npm run dev` in the `backend` directory.
+
+7. Start the frontend application by running `npm start` in the `frontend` directory (it opens on `http://localhost:3000`).
 
 ## Screenshots
 
-![Screenshot 1](screenshots/UploadPageStart.png)
+**Login page**
 
-![Screenshot 1](screenshots/UploadPageStep1.png)
+![Login](screenshots-app/01-login.png)
 
-![Screenshot 3](screenshots/UploadPageStep2.png)
+**Register page (choosing the carrier role)**
 
-![Screenshot 4](screenshots/UploadPageStep2Loading.png)
+![Register](screenshots-app/02-register.png)
 
-![Screenshot 5](screenshots/UploadPageStep3.png)
+**Upload page - start (role: user)**
 
-![Screenshot 6](screenshots/OverviewPage.png)
+![Upload empty](screenshots-app/03-upload-empty.png)
 
-![Screenshot 7](screenshots/DetailPage.png)
+**Upload page - selected files**
+
+![Upload files](screenshots-app/04-upload-files.png)
+
+**Upload page - validation step**
+
+![Upload validate](screenshots-app/05-upload-validate.png)
+
+**Upload page - importing (loading)**
+
+![Upload loading](screenshots-app/06-upload-loading.png)
+
+**Upload page - import results**
+
+![Upload result](screenshots-app/07-upload-result.png)
+
+**Upload page - additional information for a file**
+
+![Upload additional info](screenshots-app/08-upload-additional.png)
+
+**Overview page - role `user` sees all carriers**
+
+![Overview user](screenshots-app/09-overview-user.png)
+
+**Overview page - search**
+
+![Overview search](screenshots-app/10-overview-search.png)
+
+**Overview page - advanced filters**
+
+![Overview filters](screenshots-app/11-overview-filters.png)
+
+**Detail page**
+
+![Detail](screenshots-app/12-detail.png)
+
+**Overview page - role `carrier` (DHL) sees only DHL shipments**
+
+![Overview carrier](screenshots-app/13-overview-carrier-dhl.png)
 
 ## Contributing
 

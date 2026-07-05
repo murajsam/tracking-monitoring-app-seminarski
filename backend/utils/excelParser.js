@@ -168,7 +168,7 @@ export const processExcelFile = (buffer) => {
     sheetStubs: true, // empty rows/columns are created too
   });
 
-  // prolazimo kroz svaki list (sheet) u fajlu
+  // go through every sheet in the file
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
