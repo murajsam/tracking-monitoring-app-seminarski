@@ -1,0 +1,63 @@
+{
+  "scenario": "B_dhl_10000",
+  "mode": "full",
+  "date": "2026-07-17T11:58:10.235Z",
+  "environment": {
+    "node": "v22.20.0",
+    "os": "Windows_NT 10.0.19045",
+    "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
+    "logicalCores": 6,
+    "totalRamGB": 23.9,
+    "db": "MongoDB (local)"
+  },
+  "expected": {
+    "files": 1,
+    "rows": 10000,
+    "unknownFiles": 0,
+    "expectedDuplicates": 500,
+    "invalidCells": 87
+  },
+  "totals": {
+    "files": 1,
+    "rows": 10000,
+    "imported": 9500,
+    "duplicates": 500,
+    "failedFiles": 0,
+    "invalidInjected": 87,
+    "invalidDetected": 87,
+    "loadParseMs": 2219.0978999999998,
+    "importMs": 54104.3046,
+    "xlsxReadMs": 0,
+    "detectMapMs": 0
+  },
+  "timing": {
+    "wallMs": 56331,
+    "avgPerFileMs": 56331.3,
+    "rowsPerSecond": 177.5
+  },
+  "memory": {
+    "nodePeakRssMB": 208.1,
+    "nodePeakHeapMB": 133.8,
+    "mongodPeakWsMB": 244.5
+  },
+  "cpu": {
+    "nodeUserMs": 16032,
+    "nodeSystemMs": 1031,
+    "nodeCpuPercentOfOneCore": 30.3,
+    "systemCpuPercent": 59,
+    "mongodCpuMs": 40938
+  },
+  "perFile": [
+    {
+      "name": "dhl_10000.xlsx",
+      "type": "DHL",
+      "rows": 10000,
+      "loadParseMs": 2219.0978999999998,
+      "carrier": "DHL",
+      "importMs": 54104.3046,
+      "status": "Validated",
+      "imported": 9500,
+      "duplicates": 500
+    }
+  ]
+}

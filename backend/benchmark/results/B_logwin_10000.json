@@ -1,0 +1,63 @@
+{
+  "scenario": "B_logwin_10000",
+  "mode": "full",
+  "date": "2026-07-17T11:58:59.053Z",
+  "environment": {
+    "node": "v22.20.0",
+    "os": "Windows_NT 10.0.19045",
+    "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
+    "logicalCores": 6,
+    "totalRamGB": 23.9,
+    "db": "MongoDB (local)"
+  },
+  "expected": {
+    "files": 1,
+    "rows": 10000,
+    "unknownFiles": 0,
+    "expectedDuplicates": 487,
+    "invalidCells": 98
+  },
+  "totals": {
+    "files": 1,
+    "rows": 10000,
+    "imported": 9513,
+    "duplicates": 487,
+    "failedFiles": 0,
+    "invalidInjected": 98,
+    "invalidDetected": 98,
+    "loadParseMs": 2110.3412,
+    "importMs": 45413.707299999995,
+    "xlsxReadMs": 0,
+    "detectMapMs": 0
+  },
+  "timing": {
+    "wallMs": 47531,
+    "avgPerFileMs": 47530.7,
+    "rowsPerSecond": 210.4
+  },
+  "memory": {
+    "nodePeakRssMB": 217.3,
+    "nodePeakHeapMB": 134.5,
+    "mongodPeakWsMB": 253.6
+  },
+  "cpu": {
+    "nodeUserMs": 16047,
+    "nodeSystemMs": 1062,
+    "nodeCpuPercentOfOneCore": 36,
+    "systemCpuPercent": 59.3,
+    "mongodCpuMs": 33094
+  },
+  "perFile": [
+    {
+      "name": "logwin_10000.xlsx",
+      "type": "Logwin",
+      "rows": 10000,
+      "loadParseMs": 2110.3412,
+      "carrier": "Logwin",
+      "importMs": 45413.707299999995,
+      "status": "Validated",
+      "imported": 9513,
+      "duplicates": 487
+    }
+  ]
+}

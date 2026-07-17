@@ -1,0 +1,62 @@
+{
+  "scenario": "B_hellman_1000",
+  "mode": "parse-only",
+  "date": "2026-07-17T12:11:55.996Z",
+  "environment": {
+    "node": "v22.20.0",
+    "os": "Windows_NT 10.0.19045",
+    "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
+    "logicalCores": 6,
+    "totalRamGB": 23.9,
+    "db": null
+  },
+  "expected": {
+    "files": 1,
+    "rows": 1000,
+    "unknownFiles": 0,
+    "expectedDuplicates": 53,
+    "invalidCells": 7
+  },
+  "totals": {
+    "files": 1,
+    "rows": 1000,
+    "imported": 0,
+    "duplicates": 0,
+    "failedFiles": 0,
+    "invalidInjected": 0,
+    "invalidDetected": 0,
+    "loadParseMs": 182.35940000000005,
+    "importMs": 0,
+    "xlsxReadMs": 153.37799999999993,
+    "detectMapMs": 28.98140000000012
+  },
+  "timing": {
+    "wallMs": 337,
+    "avgPerFileMs": 337,
+    "rowsPerSecond": 2967.7
+  },
+  "memory": {
+    "nodePeakRssMB": 0,
+    "nodePeakHeapMB": 0,
+    "mongodPeakWsMB": null
+  },
+  "cpu": {
+    "nodeUserMs": 391,
+    "nodeSystemMs": 31,
+    "nodeCpuPercentOfOneCore": 125.2,
+    "systemCpuPercent": 80.1,
+    "mongodCpuMs": null
+  },
+  "perFile": [
+    {
+      "name": "hellman_1000.xlsx",
+      "type": "Hellman",
+      "rows": 1000,
+      "xlsxReadMs": 153.37799999999993,
+      "totalParseMs": 182.35940000000005,
+      "detectMapMs": 28.98140000000012,
+      "carrier": "Hellman",
+      "mappedRows": 1000
+    }
+  ]
+}
