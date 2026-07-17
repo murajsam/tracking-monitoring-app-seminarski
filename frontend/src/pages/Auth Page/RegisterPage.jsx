@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -8,8 +8,26 @@ const RegisterPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user"); // default: regular user
-  const [carrier, setCarrier] = useState("DHL"); // only used if the role is carrier
+  const [carrier, setCarrier] = useState(""); // only used if the role is carrier
+  const [carrierOptions, setCarrierOptions] = useState([]); // list of carriers from the backend
   const [error, setError] = useState("");
+
+  // load the list of supported carriers from the backend (comes from the configuration)
+  useEffect(() => {
+    const loadCarriers = async () => {
+      try {
+        const response = await axios.get(API_URL + "/carriers");
+        setCarrierOptions(response.data.carriers);
+        // preselect the first carrier so the dropdown is never empty
+        if (response.data.carriers.length > 0) {
+          setCarrier(response.data.carriers[0]);
+        }
+      } catch (err) {
+        setError("Failed to load the carrier list.");
+      }
+    };
+    loadCarriers();
+  }, []);
 
   const { loginUser } = useAuth();
   const navigate = useNavigate();
@@ -84,9 +102,11 @@ const RegisterPage = () => {
               onChange={(e) => setCarrier(e.target.value)}
               className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500"
             >
-              <option value="DHL">DHL</option>
-              <option value="Hellman">Hellman</option>
-              <option value="Logwin">Logwin</option>
+              {carrierOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
           )}
 

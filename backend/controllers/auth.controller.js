@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import { carrierNames } from "../utils/carrierConfig.js";
 
 // create a token for the user (valid for 7 days)
 const createToken = (user) => {
@@ -33,11 +34,11 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Username is already taken." });
     }
 
-    // if the role is "carrier", a carrier must be selected
-    if (role === "carrier" && !carrier) {
+    // if the role is "carrier", a valid carrier from the configuration must be selected
+    if (role === "carrier" && !carrierNames.includes(carrier)) {
       return res
         .status(400)
-        .json({ message: "Carrier must choose DHL, Hellman or Logwin." });
+        .json({ message: `Carrier must choose ${carrierNames.join(", ")}.` });
     }
 
     // hash the password so it isn't stored as plain text

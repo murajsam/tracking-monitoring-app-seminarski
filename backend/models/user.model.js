@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { carrierNames } from "../utils/carrierConfig.js";
 
 // user model for login and registration
 const userSchema = new mongoose.Schema(
@@ -21,10 +22,10 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "carrier"],
       default: "user",
     },
-    // which carrier this is (only for role "carrier"): DHL, Hellman or Logwin
+    // which carrier this is (only for role "carrier") - list comes from the configuration
     carrier: {
       type: String,
-      enum: ["DHL", "Hellman", "Logwin", null],
+      enum: [...carrierNames, null],
       default: null,
     },
   },

@@ -1,96 +1,34 @@
 import XLSX from "xlsx";
 import { convertWeight, isPotentialDate } from "./dataConverters.js";
+import { carriers } from "./carrierConfig.js";
 
-// expected column names in the excel file for each carrier (DHL, Hellman, Logwin)
-const carriers = [
-  {
-    name: "DHL",
-    fields: [
-      "Payer Account Number",
-      "Pickup Date",
-      "Origin Country/Territory IATA code",
-      "Origin City IATA Code",
-      "Destination Country/Territory IATA code",
-      "Destination City IATA Code",
-      "Waybill Number",
-      "Shipper Reference Number",
-      "Receiver",
-      "Receiver Postal Code",
-      "Product Code",
-      "Pieces",
-      "Piece ID",
-      "Manifested Weight",
-      "Estimated Delivery Date",
-      "Last Checkpoint Code",
-      "Latest Checkpoint Date/Time",
-      "Latest Checkpoint",
-      "Latest Checkpoint's Remarks",
-      "Location of Scan",
-      "Customer Uploaded Comments",
-      "Comments",
-    ],
-  },
-  {
-    name: "Hellman",
-    fields: [
-      "Status",
-      "House AWB",
-      "Shipper Name",
-      "Shipper Country",
-      "Consignee Name",
-      "Consignee Country",
-      "Departure Country",
-      "Departure Port",
-      "Destination Country",
-      "Destination Port",
-      "Incoterm",
-      "Flight No",
-      "No of Packages",
-      "Gross Weight (Kg)",
-      "Chargeable Weight (Kg)",
-      "Act. Pick Up",
-      "Flight ETD",
-      "Flight ATD",
-      "Flight ETA",
-      "Flight ATA",
-      "Act. Delivery",
-    ],
-  },
-  {
-    name: "Logwin",
-    fields: [
-      "Status",
-      "MOT",
-      "Port of Origin",
-      "Port of Destination",
-      "Shipment No.",
-      "House",
-      "Master",
-      "Shipper",
-      "Consignee",
-      "PO Number",
-      "Shipper Ref.",
-      "ETD",
-      "ETA",
-      "ATD",
-      "ATA",
-      "Vessel",
-      "Voyage / Flight",
-      "Carrier",
-      "Container",
-      "Packages",
-      "Weight",
-      "Volume",
-    ],
-  },
+// carrier definitions (expected column names, mapping rules, header offset, time zone)
+// come from config/carriers.json, so a new carrier can be added
+// by editing the configuration only - without changing this code
+
+// unified database fields - every carrier's row is translated into this structure
+const UNIFIED_FIELDS = [
+  "Status",
+  "House AWB",
+  "Shipper",
+  "Receiver",
+  "PO Number",
+  "Shipper Ref. No",
+  "ETD",
+  "ETA",
+  "ATD",
+  "ATA",
+  "Carrier",
+  "Packages",
+  "Weight",
+  "Volume",
+  "Shipper Country",
+  "Receiver Country",
+  "Inco Term",
+  "Flight No",
+  "Pick-up Date",
+  "Latest Checkpoint",
 ];
-
-// time zones for each carrier (in minutes)
-const carrierOffsets = {
-  DHL: 60, // GMT+0100
-  Hellman: 120, // GMT+0200
-  Logwin: 120, // GMT+0200
-};
 
 // clean a string (strip line breaks and double spaces) so it compares nicely to column names
 const cleanString = (value) => {
@@ -118,9 +56,9 @@ const findCarrier = (row) => {
 };
 
 // if the value is a date, adjust it to the carrier's time zone; if not a valid date, return null
-const adjustDateForCarrier = (value, carrierName) => {
+const adjustDateForCarrier = (value, carrier) => {
   const date = new Date(value);
-  const offsetMinutes = carrierOffsets[carrierName] || 0;
+  const offsetMinutes = carrier.timezoneOffsetMinutes || 0;
   const adjustedDate = new Date(date.getTime() + offsetMinutes * 60 * 1000);
   if (isNaN(adjustedDate.getTime())) {
     return null;
@@ -132,9 +70,9 @@ const adjustDateForCarrier = (value, carrierName) => {
 // - if it's a date -> adjust the time zone
 // - if it's empty ("") -> null
 // - otherwise -> the value as is
-const convertValue = (value, carrierName) => {
+const convertValue = (value, carrier) => {
   if (isPotentialDate(value)) {
-    return adjustDateForCarrier(value, carrierName);
+    return adjustDateForCarrier(value, carrier);
   }
   if (value === "") {
     return null;
@@ -158,6 +96,36 @@ const getAdditionalInfo = (row, usedKeys) => {
     }
   });
   return additionalInfo;
+};
+
+// translates one carrier row into the unified database format
+// using the "mapping" rules from the configuration:
+// - "Carrier" is always the detected carrier's name
+// - "Weight" goes through the kg conversion
+// - fields without a mapping rule stay null
+// - leftover columns are kept in "Additional Info"
+const mapToUnified = (row, carrier) => {
+  const unifiedRow = {};
+  UNIFIED_FIELDS.forEach((field) => {
+    const sourceColumn = carrier.mapping[field];
+    if (field === "Carrier") {
+      unifiedRow[field] = carrier.name;
+    } else if (!sourceColumn) {
+      unifiedRow[field] = null;
+    } else if (field === "Weight") {
+      unifiedRow[field] = weightOrNull(row[sourceColumn]);
+    } else {
+      unifiedRow[field] = row[sourceColumn];
+    }
+  });
+
+  // columns already used by the mapping (plus explicitly excluded ones) don't go to Additional Info
+  const usedKeys = Object.values(carrier.mapping).concat(
+    carrier.additionalInfoExclude || []
+  );
+  unifiedRow["Additional Info"] = getAdditionalInfo(row, usedKeys);
+
+  return unifiedRow;
 };
 
 // main function: read the excel, detect the carrier and return data mapped for the database
@@ -191,9 +159,9 @@ export const processExcelFile = (buffer) => {
       continue;
     }
 
-    // read the data rows (after the header row; Logwin has a different layout so it starts from the same row)
-    const startIndex =
-      headerRowIndex + (matchingCarrier.name === "Logwin" ? 0 : 1);
+    // read the data rows (offset after the header row comes from the configuration,
+    // because some carriers like Logwin have a different layout)
+    const startIndex = headerRowIndex + matchingCarrier.headerRowOffset;
     const retrievedTrackingData = [];
 
     for (let i = startIndex; i < rows.length; i++) {
@@ -204,7 +172,7 @@ export const processExcelFile = (buffer) => {
       const mappedRow = {};
       matchingCarrier.fields.forEach((field, index) => {
         const value = Object.values(rowItem)[index];
-        mappedRow[field] = convertValue(value, matchingCarrier.name);
+        mappedRow[field] = convertValue(value, matchingCarrier);
       });
 
       // add the row only if it isn't completely empty
@@ -219,117 +187,10 @@ export const processExcelFile = (buffer) => {
       }
     }
 
-    // now translate each row into the unified database format (mapping rules)
-    let trackingData = [];
-
-    if (matchingCarrier.name === "DHL") {
-      trackingData = retrievedTrackingData.map((row) => ({
-        Status: null,
-        "House AWB": row["Waybill Number"],
-        Shipper: null,
-        Receiver: row["Receiver"],
-        "PO Number": null,
-        "Shipper Ref. No": row["Shipper Reference Number"],
-        ETD: null,
-        ETA: row["Estimated Delivery Date"],
-        ATD: null,
-        ATA: null,
-        Carrier: matchingCarrier.name,
-        Packages: row["Pieces"],
-        Weight: weightOrNull(row["Manifested Weight"]),
-        Volume: null,
-        "Shipper Country": null,
-        "Receiver Country": null,
-        "Inco Term": null,
-        "Flight No": null,
-        "Pick-up Date": null,
-        "Latest Checkpoint": null,
-        "Additional Info": getAdditionalInfo(row, [
-          "Waybill Number",
-          "Shipper Reference Number",
-          "Receiver",
-          "Pieces",
-          "Manifested Weight",
-          "Estimated Delivery Date",
-        ]),
-      }));
-    } else if (matchingCarrier.name === "Hellman") {
-      trackingData = retrievedTrackingData.map((row) => ({
-        Status: row["Status"],
-        "House AWB": row["House AWB"],
-        Shipper: row["Shipper Name"],
-        Receiver: row["Consignee Name"],
-        "PO Number": null,
-        "Shipper Ref. No": null,
-        ETD: row["Flight ETD"],
-        ETA: row["Flight ETA"],
-        ATD: row["Flight ATD"],
-        ATA: row["Flight ATA"],
-        Carrier: matchingCarrier.name,
-        Packages: row["No of Packages"],
-        Weight: weightOrNull(row["Gross Weight (Kg)"]),
-        Volume: null,
-        "Shipper Country": row["Shipper Country"],
-        "Receiver Country": row["Consignee Country"],
-        "Inco Term": null,
-        "Flight No": null,
-        "Pick-up Date": null,
-        "Latest Checkpoint": null,
-        "Additional Info": getAdditionalInfo(row, [
-          "Status",
-          "House AWB",
-          "Shipper Name",
-          "Shipper Country",
-          "Consignee Name",
-          "Consignee Country",
-          "Flight ETD",
-          "Flight ETA",
-          "Flight ATD",
-          "Flight ATA",
-          "No of Packages",
-          "Gross Weight (Kg)",
-        ]),
-      }));
-    } else if (matchingCarrier.name === "Logwin") {
-      trackingData = retrievedTrackingData.map((row) => ({
-        Status: row["Status"],
-        "House AWB": row["House"],
-        Shipper: row["Shipper"],
-        Receiver: row["Consignee"],
-        "PO Number": row["PO Number"],
-        "Shipper Ref. No": row["Shipper Ref."],
-        ETD: row["ETD"],
-        ETA: row["ETA"],
-        ATD: row["ATD"],
-        ATA: row["ATA"],
-        Carrier: matchingCarrier.name,
-        Packages: row["Packages"],
-        Weight: weightOrNull(row["Weight"]),
-        Volume: row["Volume"],
-        "Shipper Country": null,
-        "Receiver Country": null,
-        "Inco Term": null,
-        "Flight No": null,
-        "Pick-up Date": null,
-        "Latest Checkpoint": null,
-        "Additional Info": getAdditionalInfo(row, [
-          "Status",
-          "House",
-          "Shipper",
-          "Consignee",
-          "PO Number",
-          "Shipper Ref.",
-          "ETD",
-          "ETA",
-          "ATD",
-          "ATA",
-          "Carrier",
-          "Packages",
-          "Weight",
-          "Volume",
-        ]),
-      }));
-    }
+    // now translate each row into the unified database format (mapping rules from config)
+    const trackingData = retrievedTrackingData.map((row) =>
+      mapToUnified(row, matchingCarrier)
+    );
 
     // return the finished data and the name of the detected carrier
     return { trackingData, carrier: matchingCarrier.name };

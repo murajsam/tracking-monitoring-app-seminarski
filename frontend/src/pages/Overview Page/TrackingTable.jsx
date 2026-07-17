@@ -48,9 +48,13 @@ const TrackingTable = ({
           </div>
         );
       default:
+        // carriers without a known logo are still shown by name (new ones from the configuration)
         return (
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Not Specified</span>
+            <Globe className="w-5 h-5 text-gray-400" />
+            <span className={carrier ? "" : "text-gray-500"}>
+              {carrier || "Not Specified"}
+            </span>
           </div>
         );
     }

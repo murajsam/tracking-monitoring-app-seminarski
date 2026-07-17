@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import fileRoutes from "./routes/file.route.js";
 import trackingRoutes from "./routes/tracking.route.js";
 import authRoutes from "./routes/auth.route.js";
+import carrierRoutes from "./routes/carrier.route.js";
 
 // load environment variables from .env file
 dotenv.config();
@@ -35,6 +36,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes); // routes for user registration and login
 app.use("/api/files", fileRoutes); // route for file upload and tracking data import
 app.use("/api/trackings", trackingRoutes); // route for getting tracking data from database
+app.use("/api/carriers", carrierRoutes); // route for the list of supported carriers (from configuration)
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

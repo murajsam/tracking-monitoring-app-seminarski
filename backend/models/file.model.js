@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { carrierNames } from "../utils/carrierConfig.js";
 
 // model for uploaded files for tracking data
 const fileSchema = new mongoose.Schema({
@@ -8,7 +9,8 @@ const fileSchema = new mongoose.Schema({
   },
   carrier: {
     type: String,
-    enum: ["Logwin", "DHL", "Hellman", "Unknown"],
+    // allowed carriers come from the configuration (plus "Unknown" for failed files)
+    enum: [...carrierNames, "Unknown"],
     default: "Unknown",
   },
   status: {
