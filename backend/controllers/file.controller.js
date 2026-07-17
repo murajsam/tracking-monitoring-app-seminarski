@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import File from "../models/file.model.js";
-import Tracking from "../models/tracking.model.js";
 import { processExcelFile } from "../utils/excelParser.js";
+import { importTrackingData } from "../utils/importTracking.js";
 
 // upload file and import its tracking data into database
 export const uploadFile = async (req, res) => {
@@ -16,7 +16,8 @@ export const uploadFile = async (req, res) => {
 
     const filePath = path.resolve(file.path);
     const buffer = fs.readFileSync(filePath);
-    // get final mapped tracking data and matching carrier name from Excel file (predefined fields rules mapping from .csv file)
+    // get final mapped tracking data and matching carrier name from Excel file
+    // (carrier definitions and mapping rules come from config/carriers.json)
     const { trackingData, carrier } = processExcelFile(buffer);
 
     // create file object to store in database
@@ -42,71 +43,12 @@ export const uploadFile = async (req, res) => {
       });
     }
 
-    let importedRows = 0;
-    let duplicatedRows = 0;
-
-    // fields to check for duplicates
-    const fieldsToCheck = [
-      "Status",
-      "PO Number",
-      "ETD",
-      "ETA",
-      "ATD",
-      "ATA",
-      "Packages",
-      "Weight",
-      "Volume",
-      "Shipper",
-      "Shipper Country",
-      "Receiver",
-      "Receiver Country",
-      "House AWB",
-      "Shipper Ref. No",
-      "Carrier",
-      "Inco Term",
-      "Flight No",
-      "Pick-up Date",
-      "Latest Checkpoint",
-    ];
-
-    // import tracking data from file
-    // if tracking data is duplicated, skip it (duplicated rows will be counted in duplicatedRows variable)
-    // if tracking data is not duplicated, save it to database (importedRows variable will be counted)
-    for (const row of trackingData) {
-      try {
-        const query = {};
-        fieldsToCheck.forEach((field) => {
-          // only check fields for duplicates which are not empty, not null, not undefined and not 0
-          if (
-            row[field] !== undefined &&
-            row[field] !== 0 &&
-            row[field] !== null &&
-            row[field] !== "" &&
-            (typeof row[field] !== "string" || row[field].trim() !== "")
-          ) {
-            query[`data.${field}`] = row[field];
-          }
-        });
-
-        // check if tracking data is already imported
-        const existingData = await Tracking.findOne(query);
-
-        // if tracking data is not imported, save it to database
-        if (!existingData) {
-          const trackingRecord = new Tracking({
-            data: row,
-            fileId: fileRecord._id,
-            fileName: fileRecord.fileName,
-          });
-          await trackingRecord.save();
-          importedRows++;
-        } else {
-          duplicatedRows++;
-        }
-      } catch (error) {
-        console.error(`Failed to process row: ${row}`, error.message);
-      }
-    }
+    // import tracking data from file with duplicate detection
+    // (the shared import logic lives in utils/importTracking.js)
+    const { importedRows, duplicatedRows } = await importTrackingData(
+      trackingData,
+      fileRecord
+    );
 
     // update file object with imported rows and duplicated rows and calculate success rate
     fileRecord.importedRows = importedRows;
